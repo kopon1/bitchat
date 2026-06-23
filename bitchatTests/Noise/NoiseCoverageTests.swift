@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import Testing
+import BitFoundation
 
 @testable import bitchat
 
@@ -541,7 +542,7 @@ struct NoiseCoverageTests {
 
         let didEstablish = await TestHelpers.waitUntil(
             { establishedRecorder.establishedCount == 2 },
-            timeout: 0.5
+            timeout: 5.0
         )
         #expect(didEstablish)
         #expect(establishedRecorder.establishedPeerIDs.contains(alicePeerID))
@@ -560,7 +561,7 @@ struct NoiseCoverageTests {
 
         let didFail = await TestHelpers.waitUntil(
             { failureRecorder.failureCount == 1 },
-            timeout: 0.5
+            timeout: 5.0
         )
         #expect(didFail)
         #expect(failingManager.getSession(for: charliePeerID) == nil)

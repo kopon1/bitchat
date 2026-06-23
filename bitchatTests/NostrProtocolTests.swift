@@ -8,6 +8,7 @@
 import Testing
 import CryptoKit
 import Foundation
+import BitFoundation
 @testable import bitchat
 
 struct NostrProtocolTests {
@@ -116,6 +117,42 @@ struct NostrProtocolTests {
                     recipientIdentity: wrongRecipient
                 )
             }
+        }
+    }
+
+    @Test func decryptRejectsInvalidSealSignature() throws {
+        let sender = try NostrIdentity.generate()
+        let recipient = try NostrIdentity.generate()
+        let giftWrap = try NostrProtocol.createPrivateMessageWithInvalidSealSignatureForTesting(
+            content: "forged signature",
+            recipientPubkey: recipient.publicKeyHex,
+            senderIdentity: sender
+        )
+
+        expectInvalidEvent {
+            _ = try NostrProtocol.decryptPrivateMessage(
+                giftWrap: giftWrap,
+                recipientIdentity: recipient
+            )
+        }
+    }
+
+    @Test func decryptRejectsSealRumorPubkeyMismatch() throws {
+        let claimedSender = try NostrIdentity.generate()
+        let sealSigner = try NostrIdentity.generate()
+        let recipient = try NostrIdentity.generate()
+        let giftWrap = try NostrProtocol.createPrivateMessageWithMismatchedSealRumorPubkeyForTesting(
+            content: "spoofed sender",
+            recipientPubkey: recipient.publicKeyHex,
+            rumorIdentity: claimedSender,
+            sealSignerIdentity: sealSigner
+        )
+
+        expectInvalidEvent {
+            _ = try NostrProtocol.decryptPrivateMessage(
+                giftWrap: giftWrap,
+                recipientIdentity: recipient
+            )
         }
     }
 
@@ -258,5 +295,16 @@ struct NostrProtocolTests {
         let rem = str.count % 4
         if rem > 0 { str.append(String(repeating: "=", count: 4 - rem)) }
         return Data(base64Encoded: str)
+    }
+
+    private func expectInvalidEvent(_ operation: () throws -> Void) {
+        do {
+            try operation()
+            Issue.record("Expected NostrError.invalidEvent")
+        } catch NostrError.invalidEvent {
+            return
+        } catch {
+            Issue.record("Expected NostrError.invalidEvent, got \(error)")
+        }
     }
 }
